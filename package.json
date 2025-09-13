@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@xterm/xterm": "^5.5.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.5"
+  },
+  "scripts": {
+    "dev": "vite"
+  }
+}
