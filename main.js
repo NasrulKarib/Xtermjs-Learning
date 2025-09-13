@@ -12,7 +12,7 @@ const term = new Terminal({
 });
 
 term.open(document.getElementById('terminal'));
-
+term.focus();
 
 function typeWrite(text, delay = 50) {
     return new Promise(resolve =>{
@@ -28,9 +28,11 @@ function typeWrite(text, delay = 50) {
     })
 }
 
-async function demo(){
-   await typeWrite('\x1b[31m\x1b[1mWelcome to xtermjs...\x1b[0m\r\n');
-   term.write("Enter your command: ")
+function demo(){
+   typeWrite('\x1b[31m\x1b[1mWelcome to xtermjs...\x1b[0m\r\n')
+   .then(() => {
+       term.write("Enter your command: ");
+   });
 }
 demo();
 
@@ -44,6 +46,25 @@ term.onData(data => {
             if(currentInp == "clear"){
                 term.clear();
                 demo();
+                term.focus();
+            }
+            else if(currentInp == "quit"){
+                term.write('\x1b[31m\x1b[1mGoodbye!\x1b[0m\r\n');
+                setTimeout(() => {
+                    term.dispose();
+                    document.getElementById('terminal').innerHTML = '<p>Terminal closed.</p>';
+                },1000);
+                return;
+            }
+            else if(currentInp == "help"){
+                term.write('\x1b[37mAvailable commands:\x1b[0m\r\n');
+                term.write('\x1b[37m  clear  - clear screen\x1b[0m\r\n');
+                term.write('\x1b[37m  theme  - cycle through themes\x1b[0m\r\n');
+                term.write('\x1b[37m  cursor - change cursor style\x1b[0m\r\n');
+                term.write('\x1b[37m  size   - toggle terminal size\x1b[0m\r\n');
+                term.write('\x1b[37m  quit   - exit terminal\x1b[0m\r\n');
+                term.write('\x1b[37m  help   - show this help\x1b[0m\r\n');
+                term.write('Enter your command: ');
             }
             else {
                 term.write(`Hello, ${currentInp}!\r\n`);
@@ -58,7 +79,7 @@ term.onData(data => {
             term.write('\b \b'); // Visual backspace
         }
     } 
-    else if (code >= 32) { // Only printable characters
+    else{ // Only printable characters
         currentInp += data;
         term.write(data);
     }
