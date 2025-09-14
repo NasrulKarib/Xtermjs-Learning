@@ -31,6 +31,7 @@ function typeWrite(text, delay = 50) {
 function demo(){
    typeWrite('\x1b[31m\x1b[1mWelcome to xtermjs...\x1b[0m\r\n')
    .then(() => {
+       term.write("Commands: clear, quit, theme, cursor, size, help\r\n\n");
        term.write("Enter your command: ");
    });
 }
@@ -56,6 +57,50 @@ term.onData(data => {
                 },1000);
                 return;
             }
+
+            else if (currentInp == "theme"){
+                const themes = [
+                    { background: '#292727ff', foreground: '#15bf1bff' }, 
+                    { background: '#000000', foreground: '#ffffff' },     
+                    { background: '#1e3a8a', foreground: '#ffffff' },     
+                    { background: '#7f1d1d', foreground: '#fdfdfdff' }      
+                ];
+
+                const currentTheme = term.options.theme;
+                const currentIndex = themes.findIndex(idx => idx.background === currentTheme.background)
+                const nextIndex = (currentIndex + 1)%themes.length;
+
+                term.options.theme = themes[nextIndex];
+
+                term.write(`\x1b[33mTheme changed to ${nextIndex + 1}\x1b[0m\r\n`);
+                term.write('Enter your command: ');
+                
+            }
+            
+            else if(currentInp == 'cursor'){
+                const styles = ['block','underline','bar'];
+                const currentStyle =  term.options.cursorStyle;
+                const currentIndex = styles.indexOf(currentStyle);
+                const nextIndex = (currentIndex + 1) % styles.length;
+
+                term.options.cursorStyle = styles[nextIndex];
+
+                term.write(`\x1b[36mCursor style: ${styles[nextIndex]}\x1b[0m\r\n`);
+                term.write('Enter your command: ');
+
+            }
+            
+            else if(currentInp == "fontsize"){
+                const currentSize = term.options.fontSize;
+                const sizes = [12, 14, 16, 18, 20];
+                const currentIndex = sizes.indexOf(currentSize);
+                const nextIndex = (currentIndex + 1) % sizes.length;
+                
+                term.options.fontSize = sizes[nextIndex];
+                term.write(`\x1b[37mFont size changed to ${sizes[nextIndex]}px\x1b[0m\r\n`);
+                term.write('Enter your command: ');
+            }
+
             else if(currentInp == "help"){
                 term.write('\x1b[37mAvailable commands:\x1b[0m\r\n');
                 term.write('\x1b[37m  clear  - clear screen\x1b[0m\r\n');
@@ -66,6 +111,7 @@ term.onData(data => {
                 term.write('\x1b[37m  help   - show this help\x1b[0m\r\n');
                 term.write('Enter your command: ');
             }
+
             else {
                 term.write(`Hello, ${currentInp}!\r\n`);
                 term.write('Enter your command: ');
