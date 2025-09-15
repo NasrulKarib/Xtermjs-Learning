@@ -1,4 +1,8 @@
 import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
+import { SearchAddon } from '@xterm/addon-search';
+import { ClipboardAddon } from '@xterm/addon-clipboard';
 import '@xterm/xterm/css/xterm.css';
 
 const term = new Terminal({
@@ -11,8 +15,40 @@ const term = new Terminal({
     }
 });
 
+let fitAddon, webLinksAddon, searchAddon, clipboardAddon;
+
+function createAddons(){
+    const fitAddon = new FitAddon();
+    const webLinksAddon = new WebLinksAddon();
+    const searchAddon = new SearchAddon();
+    const clipboardAddon = new ClipboardAddon();
+
+    return {fitAddon, webLinksAddon, searchAddon, clipboardAddon};
+}
+
+
+function loadAddons(){
+    const addons = createAddons();
+
+    fitAddon = addons.fitAddon;
+    webLinksAddon = addons.webLinksAddon;
+    searchAddon = addons.searchAddon;
+    clipboardAddon = addons.clipboardAddon;
+
+    term.loadAddon(fitAddon);
+    term.loadAddon(webLinksAddon);
+    term.loadAddon(searchAddon);
+    term.loadAddon(clipboardAddon);
+}
+
+loadAddons();
 term.open(document.getElementById('terminal'));
 term.focus();
+
+fitAddon.fit();
+window.addEventListener('resize', ()=>{
+    fitAddon.fit();
+});
 
 let currentInp = '';
 let commandHistory = [];
@@ -20,7 +56,6 @@ let historyIndex = -1;
 let tempInp = '';
 const availableCommands = ['clear', 'quit', 'theme', 'cursor', 'fontsize', 'help'];
 
-// custom key event handler
 term.attachCustomKeyEventHandler(event =>{
 
     if(event.ctrlKey && event.key == 'q'){
@@ -31,10 +66,29 @@ term.attachCustomKeyEventHandler(event =>{
         }, 500);
         return false;
     }
-
+    if (event.ctrlKey && event.key === 'f') {
+        const searchTerm = prompt('Enter search term:');
+        if (searchTerm) {
+            const result = searchAddon.findNext(searchTerm);
+            if (result) {
+                term.write(`\r\n\x1b[32mFound: "${searchTerm}"\x1b[0m\r\n`);
+            } else {
+                term.write(`\r\n\x1b[31mNot found: "${searchTerm}"\x1b[0m\r\n`);
+            }
+            term.write('Enter your command: ');
+        }
+        return false;
+    }
+    if (event.ctrlKey && event.key === 'c') {
+        event.preventDefault();
+        term.write('\r\n\x1b[32mText copied!\x1b[0m\r\n');
+        term.write('Enter your command: ');
+        return false;
+    }
     if(event.key === 'F1'){
         term.write('\r\n\x1b[33m=== Shortcuts ===\x1b[0m\r\n');
         term.write('\x1b[37mCtrl+Q: Quit | F1: Help\x1b[0m\r\n');
+        term.write('\x1b[37mCtrl+F: Search | Ctrl+C: Copy\x1b[0m\r\n');
         term.write('\x1b[37m↑/↓: History | Esc: Cancel\x1b[0m\r\n');
         term.write('Enter your command: ' + currentInp);
         return false;
@@ -95,6 +149,7 @@ function typeWrite(text, delay = 50) {
 function demo(){
    typeWrite('\x1b[31m\x1b[1mWelcome to xtermjs...\x1b[0m\r\n')
    .then(() => {
+       term.write("Check https://xtermjs.org/ for official documentation\r\n\n")
        term.write("Commands: clear, quit, theme, cursor, fontsize, history, help\r\n\n");
        term.write("Enter your command: ");
    });
@@ -120,6 +175,7 @@ term.onData(data => {
                 demo();
                 term.focus();
             }
+
             else if(currentInp == "quit"){
                 term.write('\x1b[31m\x1b[1mGoodbye!\x1b[0m\r\n');
                 setTimeout(() => {
@@ -206,15 +262,22 @@ term.onData(data => {
         if (currentInp.length > 0) {
             currentInp = currentInp.slice(0, -1);
             term.write('\b \b'); // Visual backspace
-            historyIndex = -1;
-            tempInp = '';
+            if(historyIndex === -1) {
+                tempInp = '';
+            } else {
+                historyIndex = -1;
+                tempInp = '';
+            }
         }
     } 
     else{ // Only printable characters
         currentInp += data;
         term.write(data);
-        historyIndex = -1;
-        tempInp = '';
+        console.log(historyIndex)
+        if(historyIndex !== -1) {
+            historyIndex = -1;
+            tempInp = '';
+        }
     }
 });
 
