@@ -9,6 +9,7 @@ const term = new Terminal({
     cols: 80,
     rows: 24,
     cursorBlink: true,
+    allowProposedApi : true,
     theme: {
         background: '#292727ff',
         foreground: '#15bf1bff'
@@ -57,74 +58,106 @@ let tempInp = '';
 const availableCommands = ['clear', 'quit', 'theme', 'cursor', 'fontsize', 'help'];
 
 term.attachCustomKeyEventHandler(event =>{
+    
+    if(event.type == 'keydown'){
 
-    if(event.ctrlKey && event.key == 'q'){
-        term.write('\x1b[31m\x1b[1mForce quit!\x1b[0m\r\n');
-        setTimeout(() => {
-            term.dispose();
-            document.getElementById('terminal').innerHTML = '<p>Terminal closed.</p>';
-        }, 500);
-        return false;
-    }
-    if (event.ctrlKey && event.key === 'f') {
-        const searchTerm = prompt('Enter search term:');
-        if (searchTerm) {
-            const result = searchAddon.findNext(searchTerm);
-            if (result) {
-                term.write(`\r\n\x1b[32mFound: "${searchTerm}"\x1b[0m\r\n`);
-            } else {
-                term.write(`\r\n\x1b[31mNot found: "${searchTerm}"\x1b[0m\r\n`);
+        if(event.ctrlKey && event.key == 'q'){
+            event.preventDefault(); 
+            term.write('\x1b[31m\x1b[1mForce quit!\x1b[0m\r\n');
+            setTimeout(() => {
+                term.dispose();
+                document.getElementById('terminal').innerHTML = '<p>Terminal closed.</p>';
+            }, 500);
+            return false;
+        }
+
+        if (event.ctrlKey && event.key === 'f') {
+            event.preventDefault(); 
+            const searchTerm = prompt('Enter search term:');
+            if (searchTerm) {
+                searchAddon.clearDecorations();
+                
+                const result = searchAddon.findNext(searchTerm, {
+                    decorations: {
+                        matchBackground: '#ffff00',      // Yellow highlight
+                        matchBorder: '#ff0000',          // Red border  
+                        activeMatchBackground: '#ff6600', // Orange for current match
+                        activeMatchBorder: '#ff0000'
+                    }
+                });
+                
+                if (result) {  
+                    term.write(`\r\n\x1b[32mSearch results highlighted for "${searchTerm}"\x1b[0m\r\n`);
+                } else {
+                    term.write(`\r\n\x1b[31mNot found: "${searchTerm}"\x1b[0m\r\n`);
+                }
+                term.write('Enter your command: ');
+            }
+            return false;
+        }
+
+        if (event.ctrlKey && event.key === 'c') {
+            event.preventDefault(); 
+
+            const selection = term.getSelection();
+
+            if(selection && selection.trim()){
+                const displayText = selection.length > 50 ? selection.substring(0, 50) + '...' : selection;
+                term.write(`\r\n\x1b[32mCopied: "${displayText}"\x1b[0m\r\n`);
+            } else{
+                term.write('\r\n\x1b[33mNo text selected to copy\x1b[0m\r\n');
             }
             term.write('Enter your command: ');
+            return false;
         }
-        return false;
-    }
-    if (event.ctrlKey && event.key === 'c') {
-        event.preventDefault();
-        term.write('\r\n\x1b[32mText copied!\x1b[0m\r\n');
-        term.write('Enter your command: ');
-        return false;
-    }
-    if(event.key === 'F1'){
-        term.write('\r\n\x1b[33m=== Shortcuts ===\x1b[0m\r\n');
-        term.write('\x1b[37mCtrl+Q: Quit | F1: Help\x1b[0m\r\n');
-        term.write('\x1b[37mCtrl+F: Search | Ctrl+C: Copy\x1b[0m\r\n');
-        term.write('\x1b[37m↑/↓: History | Esc: Cancel\x1b[0m\r\n');
-        term.write('Enter your command: ' + currentInp);
-        return false;
-    }
 
-    if(event.key === 'ArrowUp'){
-        if(commandHistory.length>0 && historyIndex<commandHistory.length-1){
-            if(historyIndex == -1) tempInp = currentInp;
-            historyIndex++;
+        if(event.key === 'F1'){
+            event.preventDefault(); 
+            term.write('\r\n\x1b[33m=== Shortcuts ===\x1b[0m\r\n');
+            term.write('\x1b[37mCtrl+Q: Quit | F1: Help\x1b[0m\r\n');
+            term.write('\x1b[37mCtrl+F: Search | Ctrl+C: Copy\x1b[0m\r\n');
+            term.write('\x1b[37m↑/↓: History | Esc: Cancel\x1b[0m\r\n');
+            term.write('Enter your command: ' + currentInp);
+            return false;
+        }
+    
+        if(event.key === 'ArrowUp'){
+            event.preventDefault(); 
+            if(commandHistory.length>0 && historyIndex<commandHistory.length-1){
+                if(historyIndex == -1) tempInp = currentInp;
+                historyIndex++;
+                clearCurrentLine();
+                currentInp = commandHistory[commandHistory.length - historyIndex - 1];
+                term.write(currentInp);
+            }
+            return false;
+        }
+    
+        if(event.key === 'ArrowDown'){
+            event.preventDefault(); 
+            if(historyIndex > -1){
+                historyIndex--;
+                clearCurrentLine();
+                currentInp = historyIndex === -1 ? tempInp : commandHistory[commandHistory.length-1-historyIndex];
+                term.write(currentInp);
+                if(historyIndex === -1) tempInp = '';
+            }
+            return false;
+        }
+
+        if (event.key === 'Escape') { 
             clearCurrentLine();
-            currentInp = commandHistory[commandHistory.length - historyIndex - 1];
-            term.write(currentInp);
+            currentInp = '';
+            term.write('\r\nCancelled.\r\nEnter your command: ');
+            historyIndex = -1;
+            tempInp = '';
         }
-        return false;
     }
 
-    if(event.key === 'ArrowDown'){
-        if(historyIndex > -1){
-            historyIndex--;
-            clearCurrentLine();
-            currentInp = historyIndex === -1 ? tempInp : commandHistory[commandHistory.length-1-historyIndex];
-            term.write(currentInp);
-            if(historyIndex === -1) tempInp = '';
-        }
-        return false;
-    }
+    return true; 
+});
 
-    if(event.key == 'Escape'){
-        clearCurrentLine();
-        currentInp = '';
-        term.write('\r\nCancelled. Enter your command: ');
-        return false;
-    }
 
-    return true;
-})
 
 function clearCurrentLine() {
     for (let i = 0; i < currentInp.length; i++) {
@@ -147,7 +180,7 @@ function typeWrite(text, delay = 50) {
 }
 
 function demo(){
-   typeWrite('\x1b[31m\x1b[1mWelcome to xtermjs...\x1b[0m\r\n')
+   typeWrite('\x1b[31m\x1b[1mWelcome to my xterm.js demo terminal...\x1b[0m\r\n')
    .then(() => {
        term.write("Check https://xtermjs.org/ for official documentation\r\n\n")
        term.write("Commands: clear, quit, theme, cursor, fontsize, history, help\r\n\n");
@@ -172,6 +205,7 @@ term.onData(data => {
 
             if(currentInp == "clear"){
                 term.clear();
+                searchAddon.clearDecorations();
                 demo();
                 term.focus();
             }
@@ -185,23 +219,85 @@ term.onData(data => {
                 return;
             }
 
+            // ...existing code...
+
             else if (currentInp == "theme"){
                 const themes = [
-                    { background: '#292727ff', foreground: '#15bf1bff' }, 
-                    { background: '#000000', foreground: '#ffffff' },     
-                    { background: '#1e3a8a', foreground: '#ffffff' },     
-                    { background: '#7f1d1d', foreground: '#fdfdfdff' }      
+                    {
+                        name: 'Dark',
+                        background: '#292727ff',
+                        foreground: '#15bf1bff',
+                        cursor: '#15bf1bff',
+                        cursorAccent: '#292727ff'
+                    },
+                    {
+                        name: 'Light', 
+                        background: '#ffffff',
+                        foreground: '#000000',
+                        cursor: '#000000',
+                        cursorAccent: '#ffffff',
+                        selection: '#b3d4fc'
+                    },
+                    {
+                        name: 'Hacker',
+                        background: '#000000',
+                        foreground: '#00ff00',
+                        cursor: '#ffffffff',
+                        cursorAccent: '#000000',
+                        selection: '#003300'
+                    },
+                    {
+                        name: 'Solarized Dark',
+                        background: '#002b36',
+                        foreground: '#839496',
+                        cursor: '#93a1a1',
+                        cursorAccent: '#002b36',
+                        selection: '#073642',
+                        black: '#073642',
+                        red: '#dc322f',
+                        green: '#859900',
+                        yellow: '#b58900',
+                        blue: '#268bd2',
+                        magenta: '#d33682',
+                        cyan: '#2aa198',
+                        white: '#eee8d5',
+                        brightBlack: '#002b36',
+                        brightRed: '#cb4b16',
+                        brightGreen: '#586e75',
+                        brightYellow: '#657b83',
+                        brightBlue: '#839496',
+                        brightMagenta: '#6c71c4',
+                        brightCyan: '#93a1a1',
+                        brightWhite: '#fdf6e3'
+                    }
                 ];
 
                 const currentTheme = term.options.theme;
-                const currentIndex = themes.findIndex(idx => idx.background === currentTheme.background)
-                const nextIndex = (currentIndex + 1)%themes.length;
-
-                term.options.theme = themes[nextIndex];
-
-                term.write(`\x1b[33mTheme changed to ${nextIndex + 1}\x1b[0m\r\n`);
-                term.write('Enter your command: ');
+                let currentIndex = themes.findIndex(theme => 
+                    theme.background === currentTheme.background && 
+                    theme.foreground === currentTheme.foreground
+                );
                 
+                // If theme not found, default to first theme
+                if (currentIndex === -1) currentIndex = 0;
+                
+                const nextIndex = (currentIndex + 1) % themes.length;
+                const selectedTheme = themes[nextIndex];
+
+                // Apply the new theme
+                term.options.theme = selectedTheme;
+
+                // Provide visual feedback with theme-appropriate colors
+                const themeColors = {
+                    'Dark': '\x1b[32m',      // Green
+                    'Light': '\x1b[34m',     // Blue  
+                    'Hacker': '\x1b[92m',    // Bright Green
+                    'Solarized Dark': '\x1b[36m' // Cyan
+                };
+
+                const color = themeColors[selectedTheme.name] || '\x1b[33m';
+                term.write(`${color}Theme switched to: ${selectedTheme.name}\x1b[0m\r\n`);
+                term.write('Enter your command: ');
             }
             
             else if(currentInp == 'cursor'){
@@ -239,6 +335,7 @@ term.onData(data => {
                 term.write('\x1b[37m  help   - show this help\x1b[0m\r\n');
                 term.write('Enter your command: ');
             }
+
             else if(currentInp == "history"){
                 term.write('\x1b[35mCommand History:\x1b[0m\r\n');
                 if(commandHistory.length === 0) {
@@ -273,7 +370,6 @@ term.onData(data => {
     else{ // Only printable characters
         currentInp += data;
         term.write(data);
-        console.log(historyIndex)
         if(historyIndex !== -1) {
             historyIndex = -1;
             tempInp = '';
