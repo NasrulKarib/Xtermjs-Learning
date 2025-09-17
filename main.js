@@ -11,8 +11,11 @@ const term = new Terminal({
     cursorBlink: true,
     allowProposedApi : true,
     theme: {
-        background: '#292727ff',
-        foreground: '#15bf1bff'
+        background: '#000000',        // Pure black like Windows CMD
+        foreground: '#ffffff',        // Pure white text
+        cursor: '#ffffff',            // White cursor
+        cursorAccent: '#000000',      // Black cursor accent
+        selection: '#ffffff40'        // Semi-transparent white selection
     }
 });
 
@@ -79,9 +82,7 @@ term.attachCustomKeyEventHandler(event =>{
                 
                 const result = searchAddon.findNext(searchTerm, {
                     decorations: {
-                        matchBackground: '#ffff00',      // Yellow highlight
                         matchBorder: '#ff0000',          // Red border  
-                        activeMatchBackground: '#ff6600', // Orange for current match
                         activeMatchBorder: '#ff0000'
                     }
                 });
@@ -225,10 +226,11 @@ term.onData(data => {
                 const themes = [
                     {
                         name: 'Dark',
-                        background: '#292727ff',
-                        foreground: '#15bf1bff',
-                        cursor: '#15bf1bff',
-                        cursorAccent: '#292727ff'
+                        background: '#000000',        
+                        foreground: '#ffffff',        
+                        cursor: '#ffffff',            
+                        cursorAccent: '#000000',      
+                        selection: '#ffffff40'       
                     },
                     {
                         name: 'Light', 
